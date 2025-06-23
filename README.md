@@ -113,8 +113,7 @@ npx prisma generate
 # Application des migrations
 npx prisma db push
 
-# Peuplement initial (optionnel)
-npx prisma db seed
+
 ```
 
 ### 5. Démarrage en développement
@@ -193,7 +192,7 @@ npm run db:seed
 ```
 
 
-- **DigitalOcean** : App Platform
+
 
 
 
