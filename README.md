@@ -1,6 +1,6 @@
 # 🎓 FormConsult - Plateforme de Formation & Consulting 
 
-> Une plateforme complète de formation et de consulting B2B développée avec Next.js 15, TypeScript, et Prisma.
+> Une plateforme complète de formation et de consulting  développée avec Next.js 15, TypeScript, et Prisma.
 
 
 
