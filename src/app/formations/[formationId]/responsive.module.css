@@ -1,0 +1,95 @@
+/* Responsive Learning Interface Styles */
+
+/* Mobile-first approach */
+.learningContainer {
+  min-height: 100vh;
+  transition: all 0.3s ease;
+}
+
+.header {
+  border-bottom: 1px solid #e5e5e5;
+  transition: all 0.3s ease;
+}
+
+.sidebarMobile {
+  width: 100vw;
+}
+
+.sidebarTablet {
+  width: 320px;
+}
+
+.sidebarDesktop {
+  width: 384px;
+}
+
+.videoContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+}
+
+.quizContainer {
+  padding: 1rem;
+}
+
+.lessonItem {
+  min-height: 48px;
+  transition: all 0.2s ease;
+}
+
+.lessonItem:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .quizContainer {
+    padding: 1rem 0.5rem;
+  }
+  
+  .lessonItem {
+    min-height: 56px; /* Better touch targets */
+  }
+  
+  .header {
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .quizContainer {
+    padding: 2rem 1rem;
+  }
+}
+
+/* Desktop optimizations */
+@media (min-width: 1025px) {
+  .quizContainer {
+    padding: 2rem;
+  }
+}
+
+/* Focus states for accessibility */
+.focusRing:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Loading animations */
+.loadingShimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+} 

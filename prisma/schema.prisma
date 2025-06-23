@@ -1,0 +1,554 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, token])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Modèles principaux
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN_ENTREPRISE
+  EMPLOYE
+  CONSULTANT
+  FORMATEUR
+}
+
+enum PlanType {
+  ESSENTIEL
+  PRO
+  ENTREPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+}
+
+enum AppointmentStatus {
+  PENDING
+  ASSIGNED
+  CONFIRMED
+  REJECTED
+  COMPLETED
+  CANCELED
+}
+
+enum FormationLevel {
+  DEBUTANT
+  INTERMEDIAIRE
+  AVANCE
+}
+
+// Nouveaux modèles pour la gestion des formations
+model Category {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  description   String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  subCategories SubCategory[]
+  formations    Formation[]
+}
+
+model SubCategory {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  categoryId  String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  formations Formation[]
+
+  @@unique([categoryId, name])
+}
+
+model Level {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?     @db.Text
+  order       Int         @unique
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  formations Formation[]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  role          UserRole  @default(EMPLOYE)
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations NextAuth
+  accounts Account[]
+  sessions Session[]
+
+  // Relations business
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  // Relations formations
+  userFormations UserFormation[]
+  userLessonProgress UserLessonProgress[]
+  
+  // Relations consulting (en tant qu'employé)
+  appointments Appointment[] @relation("AppointmentUser")
+  
+  // Relations consulting (en tant que consultant)
+  consultantAppointments Appointment[] @relation("AppointmentConsultant")
+
+  // Relations formations (en tant que formateur)
+  authoredFormations Formation[] @relation("FormateurFormations")
+
+  // Relations sessions de formation
+  instructorSessions FormationSession[] @relation("SessionInstructor")
+  sessionAttendances SessionAttendance[]
+  learningActivities LearningActivity[]
+
+  // Invitations envoyées
+  sentInvitations Invitation[] @relation("InvitationSender")
+  
+  // Invitations reçues
+  receivedInvitations Invitation[] @relation("InvitationReceiver")
+
+  // Notifications
+  notifications Notification[]
+  
+  // Quiz results
+  userQuizResults UserQuizResult[]
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  address     String?
+  website     String?
+  logo        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users        User[]
+  subscription Subscription?
+  invitations  Invitation[]
+  appointments Appointment[]
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  companyId         String             @unique
+  planType          PlanType
+  status            SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId  String?            @unique
+  stripeSubscriptionId String?         @unique
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+}
+
+model Formation {
+  id          String         @id @default(cuid())
+  title       String
+  subtitle    String?        @db.Text
+  description String         @db.Text
+  overview    String?        @db.Text
+  level       FormationLevel @default(DEBUTANT)
+  thumbnail   String?
+  price       Float?         @default(0)
+  isActive    Boolean        @default(true)
+  isPublished Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Nouvelles relations pour la catégorisation
+  categoryId    String?
+  category      Category?    @relation(fields: [categoryId], references: [id])
+  
+  subCategoryId String?
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+  
+  levelId       String?
+  levelRelation Level?       @relation(fields: [levelId], references: [id])
+
+  // Auteur de la formation
+  authorId    String?
+  author      User?          @relation("FormateurFormations", fields: [authorId], references: [id])
+
+  // Relations
+  sections       Section[]
+  userFormations UserFormation[]
+  quizzes        Quiz[]
+  sessions       FormationSession[]
+  learningActivities LearningActivity[]
+  resources      Resource[]
+}
+
+model Section {
+  id          String   @id @default(cuid())
+  formationId String
+  title       String
+  description String?  @db.Text
+  orderIndex  Int
+  isPublished Boolean  @default(false)
+  isFree      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  formation Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
+  resources Resource[]
+
+  @@unique([formationId, orderIndex])
+}
+
+model Lesson {
+  id         String      @id @default(cuid())
+  sectionId  String
+  title      String
+  description String?    @db.Text
+  orderIndex Int
+  duration   Int         // en secondes
+  type       LessonType  @default(VIDEO)
+  
+  // Données vidéo Mux
+  muxAssetId    String?
+  muxPlaybackId String?
+  
+  // Autres types de contenu
+  content    String?     @db.Text
+  videoUrl   String?     // URL externe si pas Mux
+  
+  isActive    Boolean     @default(true)
+  isPublished Boolean     @default(false)
+  isFree      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  section         Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  userProgress    UserLessonProgress[]
+  muxData         MuxData?
+  learningActivities LearningActivity[]
+
+  @@unique([sectionId, orderIndex])
+}
+
+// Nouveau modèle pour les données Mux
+model MuxData {
+  id         String  @id @default(cuid())
+  assetId    String
+  playbackId String?
+  lessonId   String  @unique
+  
+  lesson     Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Nouveau modèle pour les ressources téléchargeables
+model Resource {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  fileUrl     String
+  fileSize    Int?     // en bytes
+  fileType    String?
+  
+  // Relations optionnelles - peut être attaché à une formation OU une section
+  formationId String?
+  formation   Formation? @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  
+  sectionId   String?
+  section     Section?   @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserLessonProgress {
+  id             String    @id @default(cuid())
+  userId         String
+  lessonId       String
+  isCompleted    Boolean   @default(false)
+  watchedSeconds Int       @default(0)
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}
+
+enum LessonType {
+  VIDEO
+  TEXT
+  QUIZ
+  DOCUMENT
+}
+
+model UserFormation {
+  id           String    @id @default(cuid())
+  userId       String
+  formationId  String
+  progress     Float     @default(0) // Pourcentage de complétion
+  completedAt  DateTime?
+  certificateUrl String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formation Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, formationId])
+}
+
+model Quiz {
+  id          String @id @default(cuid())
+  formationId String
+  title       String
+  questions   Json   // Stockage JSON des questions et réponses
+  passingScore Int   @default(70) // Score minimum pour réussir
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  formation Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  userQuizResults UserQuizResult[]
+}
+
+model Appointment {
+  id           String            @id @default(cuid())
+  companyId    String
+  userId       String
+  consultantId String?
+  title        String
+  description  String?           @db.Text
+  scheduledAt  DateTime
+  duration     Int               @default(60) // en minutes
+  status       AppointmentStatus @default(PENDING)
+  meetingUrl   String?
+  notes        String?           @db.Text
+  completedAt  DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user       User    @relation("AppointmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  consultant User?   @relation("AppointmentConsultant", fields: [consultantId], references: [id])
+  feedback   ConsultationFeedback?
+}
+
+model Invitation {
+  id         String   @id @default(cuid())
+  email      String
+  companyId  String
+  senderId   String
+  receiverId String?
+  role       UserRole @default(EMPLOYE)
+  token      String   @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sender   User    @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User?   @relation("InvitationReceiver", fields: [receiverId], references: [id])
+}
+
+// Modèle pour les notifications en temps réel
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // 'consultation_assigned', 'consultation_confirmed', etc.
+  title     String
+  message   String   @db.Text
+  data      Json?    // Données supplémentaires (appointmentId, etc.)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
+}
+
+// Nouveaux modèles pour les sessions de formation et le suivi d'activité
+
+model FormationSession {
+  id            String    @id @default(cuid())
+  formationId   String
+  title         String
+  description   String?   @db.Text
+  startDate     DateTime
+  endDate       DateTime
+  location      String    @default("En ligne")
+  maxAttendees  Int       @default(20)
+  instructorId  String
+  isActive      Boolean   @default(true)
+  meetingUrl    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  formation Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  instructor User @relation("SessionInstructor", fields: [instructorId], references: [id])
+  attendees SessionAttendance[]
+
+  @@index([formationId, startDate])
+}
+
+model LearningActivity {
+  id           String   @id @default(cuid())
+  userId       String
+  formationId  String?
+  lessonId     String?
+  activityType String   // 'lesson_start', 'lesson_complete', 'quiz_attempt', 'session_attend', etc.
+  timeSpent    Int?     // en secondes
+  data         Json?    // Données supplémentaires spécifiques à l'activité
+  createdAt    DateTime @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formation Formation? @relation(fields: [formationId], references: [id])
+  lesson    Lesson?    @relation(fields: [lessonId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([userId, formationId, createdAt])
+}
+
+// Modèle pour les retours et évaluations des consultations
+model ConsultationFeedback {
+  id                String   @id @default(cuid())
+  appointmentId     String   @unique
+  rating            Int      // Note sur 5
+  satisfactionLevel Int      // Niveau de satisfaction sur 5
+  wouldRecommend    Boolean  @default(false)
+  comments          String?  @db.Text
+  improvementAreas  Json?    // Domaines d'amélioration suggérés
+  strengths         Json?    // Points forts identifiés
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([rating, createdAt])
+}
+
+model SessionAttendance {
+  id         String   @id @default(cuid())
+  sessionId  String
+  userId     String
+  attendedAt DateTime @default(now())
+  isPresent  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  session FormationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId, attendedAt])
+}
+
+model Invoice {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  stripeInvoiceId String  @unique
+  amountPaid     Int      // en centimes
+  currency       String   @default("eur")
+  status         String
+  paidAt         DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+}
+
+model UserQuizResult {
+  id          String   @id @default(cuid())
+  userId      String
+  quizId      String
+  score       Int      // Score obtenu en pourcentage
+  answers     Json     // Réponses données par l'utilisateur
+  isPassing   Boolean  @default(false) // Si le score est >= au score minimum
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, quizId])
+  @@index([userId, completedAt])
+}

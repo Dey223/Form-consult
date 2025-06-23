@@ -1,0 +1,149 @@
+/* Responsive Learning Interface Styles */
+
+/* Mobile-first responsive breakpoints */
+@media (max-width: 640px) {
+  /* Force full width on small screens */
+  .sidebar-mobile {
+    width: 100vw !important;
+  }
+  
+  /* Improve video controls on mobile */
+  .video-controls {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  /* Better touch targets for mobile */
+  .lesson-item {
+    min-height: 3rem;
+    padding: 0.75rem;
+  }
+  
+  /* Responsive text sizing */
+  .lesson-title {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  /* Better spacing on mobile */
+  .content-area {
+    padding: 0.75rem;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .sidebar-tablet {
+    width: 20rem; /* 320px */
+  }
+  
+  .content-area {
+    padding: 1.5rem;
+  }
+}
+
+/* Desktop optimizations */
+@media (min-width: 1025px) {
+  .sidebar-desktop {
+    width: 24rem; /* 384px */
+  }
+  
+  /* Better hover states on desktop */
+  .lesson-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .lesson-item:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* Smooth animations */
+.slide-transition {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus improvements for accessibility */
+.focus-ring:focus {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
+/* Quiz modal responsive */
+@media (max-width: 640px) {
+  .quiz-modal {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+}
+
+/* Video aspect ratio maintenance */
+.video-container {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+}
+
+.video-container iframe,
+.video-container video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Dark mode improvements */
+.dark-mode {
+  --bg-primary: #0f1419;
+  --bg-secondary: #1a202c;
+  --text-primary: #f7fafc;
+  --text-secondary: #a0aec0;
+  --border-color: #2d3748;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better focus management */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+} 
